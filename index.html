@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="screen-orientation" content="landscape">
+    <title>Schatten von Dunkelheim</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#8b0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dunkelheim">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- App Icons - Flache Struktur -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Game Styles - Flache Struktur -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Main Menu -->
+    <div id="main-menu">
+        <h1 id="game-title">Schatten von Dunkelheim</h1>
+        <p id="game-subtitle">Ein dunkles Abenteuer erwartet dich...</p>
+        <button class="menu-btn" onclick="Game.newGame()">Neues Spiel</button>
+        <button class="menu-btn" onclick="Game.loadGame()">Spiel laden</button>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <!-- Top HUD -->
+        <div id="top-hud">
+            <div class="stat-bar-container">
+                <span class="stat-label">Leben</span>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill health-fill" id="health-bar" style="width: 100%"></div>
+                    <span class="stat-value" id="health-value">100/100</span>
+                </div>
+            </div>
+            <div class="stat-bar-container">
+                <span class="stat-label">Mana</span>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill mana-fill" id="mana-bar" style="width: 100%"></div>
+                    <span class="stat-value" id="mana-value">50/50</span>
+                </div>
+            </div>
+            <div id="player-info">
+                <div id="player-name">Wanderer</div>
+                <div id="player-level">Stufe 1</div>
+            </div>
+        </div>
+        
+        <!-- Game World -->
+        <div id="game-world">
+            <div id="scene-container"></div>
+            <div id="location-indicator">
+                <div id="location-name">Dunkelheim</div>
+                <div id="location-desc">Das vergessene Dorf</div>
+            </div>
+            <div id="navigation-panel">
+                <!-- Will be populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Bottom UI -->
+        <div id="bottom-ui">
+            <!-- Quick Bar - Always visible -->
+            <div id="quick-bar">
+                <button class="quick-btn" id="toggle-inventory" onclick="Game.toggleInventory()">
+                    <span class="quick-btn-icon">🎒</span>
+                    <span>Inventar</span>
+                </button>
+                <button class="quick-btn" id="toggle-character" onclick="Game.openCharacter()">
+                    <span class="quick-btn-icon">👤</span>
+                    <span>Charakter</span>
+                </button>
+                <button class="quick-btn" onclick="Game.openQuests()">
+                    <span class="quick-btn-icon">📜</span>
+                    <span>Quests</span>
+                </button>
+                <button class="quick-btn" onclick="Game.saveGame()">
+                    <span class="quick-btn-icon">💾</span>
+                    <span>Speichern</span>
+                </button>
+                <button class="quick-btn" onclick="Game.openMenu()">
+                    <span class="quick-btn-icon">☰</span>
+                    <span>Menü</span>
+                </button>
+                
+                <!-- Equipped items display -->
+                <div id="equipped-display">
+                    <div class="equipped-slot-mini" id="mini-weapon" onclick="Game.openCharacter()" title="Waffe">🗡️</div>
+                    <div class="equipped-slot-mini" id="mini-shield" onclick="Game.openCharacter()" title="Schild">🛡️</div>
+                    <div class="equipped-slot-mini" id="mini-armor" onclick="Game.openCharacter()" title="Rüstung">🥋</div>
+                </div>
+            </div>
+            
+            <!-- Expandable Inventory -->
+            <div id="inventory-expandable">
+                <div id="inventory-content">
+                    <div id="inventory-panel">
+                        <div id="inventory-header">
+                            <div id="inventory-title">Inventar</div>
+                            <div id="inventory-gold-display">💰 <span id="inventory-gold">0</span></div>
+                            <div id="inventory-count">0/16</div>
+                        </div>
+                        <div id="inventory-slots"></div>
+                    </div>
+                    <div id="minimap-panel">
+                        <div id="minimap-title">Karte</div>
+                        <div id="minimap"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dialog Overlay -->
+        <div id="dialog-overlay">
+            <div id="dialog-box">
+                <div id="dialog-speaker">???</div>
+                <div id="dialog-text"></div>
+                <div id="dialog-options"></div>
+            </div>
+        </div>
+        
+        <!-- Combat Overlay -->
+        <div id="combat-overlay">
+            <div id="combat-arena">
+                <div class="combatant combatant-player">
+                    <div class="combatant-sprite" id="player-sprite">⚔️</div>
+                    <div class="combatant-name" id="combat-player-name">Wanderer</div>
+                    <div class="combatant-health stat-bar">
+                        <div class="stat-bar-fill health-fill" id="combat-player-health" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="combatant combatant-enemy">
+                    <div class="combatant-sprite" id="enemy-sprite">💀</div>
+                    <div class="combatant-name" id="combat-enemy-name">Feind</div>
+                    <div class="combatant-health stat-bar">
+                        <div class="stat-bar-fill health-fill" id="combat-enemy-health" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="combat-log"></div>
+            <div id="combat-actions">
+                <button class="combat-btn" onclick="Combat.attack()">Angriff</button>
+                <button class="combat-btn" onclick="Combat.useSkill()">Fähigkeit</button>
+                <button class="combat-btn" onclick="Combat.useItem()">Item</button>
+                <button class="combat-btn" onclick="Combat.flee()">Fliehen</button>
+            </div>
+        </div>
+        
+        <!-- Context Menu -->
+        <div id="context-menu"></div>
+        
+        <!-- Fullscreen Overlay -->
+        <div id="fullscreen-overlay">
+            <div id="fullscreen-prompt">
+                <div id="fullscreen-icon">📱</div>
+                <h2>Tippe für Vollbild</h2>
+                <p>Für das beste Spielerlebnis</p>
+            </div>
+        </div>
+        
+        <!-- Rotation Overlay -->
+        <div id="rotation-overlay">
+            <div id="rotation-message">
+                <div class="phone-icon">📱</div>
+                <p>Bitte drehe dein Gerät</p>
+            </div>
+        </div>
+        
+        <!-- Character Overlay -->
+        <div id="character-overlay">
+            <div id="character-header">
+                <div id="char-level-display">
+                    <span id="char-name-display">Wanderer</span> - <span id="char-level-text">Stufe 1</span>
+                    <div id="char-xp-display">XP: <span id="char-xp-value">0</span>/<span id="char-xp-next">50</span></div>
+                </div>
+                <button class="close-btn" onclick="Game.closeCharacter()">Schließen</button>
+            </div>
+            <div id="character-content">
+                <div id="equipment-panel">
+                    <div id="equipment-title">Ausrüstung</div>
+                    <div id="equipment-grid">
+                        <!-- Helmet -->
+                        <div class="equip-row">
+                            <div class="equip-slot" data-slot="helmet" onclick="Game.onEquipSlotClick('helmet')">
+                                <span class="equip-slot-icon">🎩</span>
+                                <span class="equip-slot-label">Helm</span>
+                            </div>
+                        </div>
+                        <!-- Weapon, Armor, Shield -->
+                        <div class="equip-row">
+                            <div class="equip-slot" data-slot="weapon" onclick="Game.onEquipSlotClick('weapon')">
+                                <span class="equip-slot-icon">🗡️</span>
+                                <span class="equip-slot-label">Waffe</span>
+                            </div>
+                            <div class="equip-slot" data-slot="armor" onclick="Game.onEquipSlotClick('armor')">
+                                <span class="equip-slot-icon">🥋</span>
+                                <span class="equip-slot-label">Rüstung</span>
+                            </div>
+                            <div class="equip-slot" data-slot="shield" onclick="Game.onEquipSlotClick('shield')">
+                                <span class="equip-slot-icon">🛡️</span>
+                                <span class="equip-slot-label">Schild</span>
+                            </div>
+                        </div>
+                        <!-- Character figure -->
+                        <div id="char-figure">🧙</div>
+                        <!-- Pants -->
+                        <div class="equip-row">
+                            <div class="equip-slot" data-slot="pants" onclick="Game.onEquipSlotClick('pants')">
+                                <span class="equip-slot-icon">👖</span>
+                                <span class="equip-slot-label">Hose</span>
+                            </div>
+                        </div>
+                        <!-- Rings and Amulet -->
+                        <div class="equip-row">
+                            <div class="equip-slot" data-slot="ring1" onclick="Game.onEquipSlotClick('ring1')">
+                                <span class="equip-slot-icon">💍</span>
+                                <span class="equip-slot-label">Ring 1</span>
+                            </div>
+                            <div class="equip-slot" data-slot="amulet" onclick="Game.onEquipSlotClick('amulet')">
+                                <span class="equip-slot-icon">📿</span>
+                                <span class="equip-slot-label">Amulett</span>
+                            </div>
+                            <div class="equip-slot" data-slot="ring2" onclick="Game.onEquipSlotClick('ring2')">
+                                <span class="equip-slot-icon">💍</span>
+                                <span class="equip-slot-label">Ring 2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="attributes-panel">
+                    <div id="attributes-title">Attribute</div>
+                    <div id="attribute-points-display">
+                        Verfügbare Punkte: <span id="available-points">0</span>
+                    </div>
+                    <div class="attribute-row">
+                        <span class="attribute-name">Stärke</span>
+                        <span class="attribute-value" id="attr-strength">5</span>
+                        <span class="attribute-bonus" id="attr-strength-bonus"></span>
+                        <button class="attribute-btn" onclick="Game.spendPoint('strength')">+</button>
+                        <span class="attribute-desc">Mehr Schaden</span>
+                    </div>
+                    <div class="attribute-row">
+                        <span class="attribute-name">Vitalität</span>
+                        <span class="attribute-value" id="attr-vitality">5</span>
+                        <span class="attribute-bonus" id="attr-vitality-bonus"></span>
+                        <button class="attribute-btn" onclick="Game.spendPoint('vitality')">+</button>
+                        <span class="attribute-desc">Mehr LP (+1 pro Punkt)</span>
+                    </div>
+                    <div class="attribute-row">
+                        <span class="attribute-name">Intelligenz</span>
+                        <span class="attribute-value" id="attr-intelligence">5</span>
+                        <span class="attribute-bonus" id="attr-intelligence-bonus"></span>
+                        <button class="attribute-btn" onclick="Game.spendPoint('intelligence')">+</button>
+                        <span class="attribute-desc">Mehr Mana (+3 pro Punkt)</span>
+                    </div>
+                    <div class="attribute-row">
+                        <span class="attribute-name">Geschick</span>
+                        <span class="attribute-value" id="attr-dexterity">5</span>
+                        <span class="attribute-bonus" id="attr-dexterity-bonus"></span>
+                        <button class="attribute-btn" onclick="Game.spendPoint('dexterity')">+</button>
+                        <span class="attribute-desc">Wer zuerst angreift</span>
+                    </div>
+                </div>
+                
+                <div id="stats-panel">
+                    <div id="stats-title">Werte</div>
+                    <div class="stat-row">
+                        <span class="stat-name">Level</span>
+                        <span class="stat-val" id="stat-level">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Leben</span>
+                        <span class="stat-val" id="stat-health">1/25</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Mana</span>
+                        <span class="stat-val" id="stat-mana">15/15</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Schaden</span>
+                        <span class="stat-val" id="stat-damage">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Verteidigung</span>
+                        <span class="stat-val" id="stat-defense">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Geschick</span>
+                        <span class="stat-val" id="stat-dexterity">5</span>
+                    </div>
+                    <div id="xp-bar-container">
+                        <div id="xp-label">Erfahrung</div>
+                        <div id="xp-bar">
+                            <div id="xp-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <div id="xp-text">0 / 50</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quest Overlay -->
+        <div id="quest-overlay">
+            <div id="quest-header">
+                <div id="quest-title">Quests</div>
+                <button class="close-btn" onclick="Game.closeQuests()">Schließen</button>
+            </div>
+            <div id="quest-list"></div>
+        </div>
+    </div>
+
+    <!-- Game Scripts - Flache Struktur -->
+    <script src="game-data.js"></script>
+    <script src="game-engine.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then((registration) => {
+                        console.log('ServiceWorker registriert:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('ServiceWorker Fehler:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
